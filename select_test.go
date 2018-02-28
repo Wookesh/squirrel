@@ -21,6 +21,7 @@ func TestSelectBuilderToSql(t *testing.T) {
 		Join("j2").
 		LeftJoin("j3").
 		RightJoin("j4").
+		PreWhere(Eq{"f1": 401}).
 		Where("f = ?", 4).
 		Where(Eq{"g": 5}).
 		Where(map[string]interface{}{"h": 6}).
@@ -43,25 +44,26 @@ func TestSelectBuilderToSql(t *testing.T) {
 			"(SELECT aa, bb FROM dd) AS subq " +
 			"FROM e " +
 			"CROSS JOIN j1 JOIN j2 LEFT JOIN j3 RIGHT JOIN j4 " +
+			"PREWHERE f1 = ? " +
 			"WHERE f = ? AND g = ? AND h = ? AND i IN (?,?,?) AND (j = ? OR (k = ? AND true)) " +
 			"GROUP BY l HAVING m = n ORDER BY o ASC, p DESC LIMIT 12 OFFSET 13 " +
 			"FETCH FIRST ? ROWS ONLY"
 	assert.Equal(t, expectedSql, sql)
 
-	expectedArgs := []interface{}{0, 1, 2, 3, 100, 101, 102, 103, 4, 5, 6, 7, 8, 9, 10, 11, 14}
+	expectedArgs := []interface{}{0, 1, 2, 3, 100, 101, 102, 103, 401, 4, 5, 6, 7, 8, 9, 10, 11, 14}
 	assert.Equal(t, expectedArgs, args)
 }
 
 func TestSelectBuilderFromSelect(t *testing.T) {
-	subQ := Select("c").From("d").Where(Eq{"i": 0})
+	subQ := Select("c").From("d").PreWhere(Eq{"j": 1}).Where(Eq{"i": 0})
 	b := Select("a", "b").FromSelect(subQ, "subq")
 	sql, args, err := b.ToSql()
 	assert.NoError(t, err)
 
-	expectedSql := "SELECT a, b FROM (SELECT c FROM d WHERE i = ?) AS subq"
+	expectedSql := "SELECT a, b FROM (SELECT c FROM d PREWHERE j = ? WHERE i = ?) AS subq"
 	assert.Equal(t, expectedSql, sql)
 
-	expectedArgs := []interface{}{0}
+	expectedArgs := []interface{}{1, 0}
 	assert.Equal(t, expectedArgs, args)
 }
 
