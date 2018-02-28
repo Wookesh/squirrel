@@ -204,6 +204,13 @@ func (b UpdateBuilder) SetMap(clauses map[string]interface{}) UpdateBuilder {
 	return b
 }
 
+// PreWhere adds PREWHERE expressions to the query
+//
+// See SelectBuilder.PreWhere for more information.
+func (b UpdateBuilder) PreWhere(pred interface{}, args ...interface{}) UpdateBuilder {
+	return builder.Append(b, "PreWhereParts", newWherePart(pred, args...)).(UpdateBuilder)
+}
+
 // Where adds WHERE expressions to the query.
 //
 // See SelectBuilder.Where for more information.

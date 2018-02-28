@@ -17,6 +17,7 @@ type selectData struct {
 	Columns           []Sqlizer
 	From              Sqlizer
 	Joins             []Sqlizer
+	PreWhereParts     []Sqlizer
 	WhereParts        []Sqlizer
 	GroupBys          []string
 	HavingParts       []Sqlizer
@@ -89,6 +90,14 @@ func (d *selectData) ToSql() (sqlStr string, args []interface{}, err error) {
 	if len(d.Joins) > 0 {
 		sql.WriteString(" ")
 		args, err = appendToSql(d.Joins, sql, " ", args)
+		if err != nil {
+			return
+		}
+	}
+
+	if len(d.PreWhereParts) > 0 {
+		sql.WriteString(" PREWHERE ")
+		args, err = appendToSql(d.PreWhereParts, sql, " AND ", args)
 		if err != nil {
 			return
 		}
@@ -254,6 +263,22 @@ func (b SelectBuilder) LeftJoin(join string, rest ...interface{}) SelectBuilder 
 // RightJoin adds a RIGHT JOIN clause to the query.
 func (b SelectBuilder) RightJoin(join string, rest ...interface{}) SelectBuilder {
 	return b.JoinClause("RIGHT JOIN "+join, rest...)
+}
+
+// PreWhere adds an expression to the PREWHERE clause of the query
+//
+// PREWHERE is supported by clickhouse database.
+//
+// "This clause has the same meaning as the WHERE clause.
+// The difference is in which data is read from the table.
+// When using PREWHERE, first only the columns necessary for executing PREWHERE are read.
+// Then the other columns are read that are needed for running the query,
+// but only those blocks where the PREWHERE expression is true."
+// [https://clickhouse.yandex/docs/en/query_language/queries/#prewhere-clause]
+//
+// See clickhouse documentation (link above) for more details.
+func (b SelectBuilder) PreWhere(pred interface{}, args ...interface{}) SelectBuilder {
+	return builder.Append(b, "PreWhereParts", newWherePart(pred, args...)).(SelectBuilder)
 }
 
 // Where adds an expression to the WHERE clause of the query.
